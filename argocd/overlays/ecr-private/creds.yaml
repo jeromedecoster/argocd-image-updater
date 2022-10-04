@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ecr-private-cronjob
+  namespace: my-app
+spec:
+  schedule: "*/5 * * * *" # "0 */10 * * 0" 
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ecr-private-sa
+          containers:
+          - name: ecr-registry-helper
+            image: odaniait/aws-kubectl:latest
+            imagePullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ecr-private-secret
+              - configMapRef:
+                  name: ecr-private-cm
+            command:
+              - /bin/sh
+              - -c
+              - |-
+                ECR_TOKEN=`aws ecr get-login-password --region ${AWS_REGION}`
+                NAMESPACE=my-app
+                kubectl delete secret --ignore-not-found $DOCKER_SECRET_NAME -n $NAMESPACE
+                kubectl create secret docker-registry $DOCKER_SECRET_NAME \
+                  --docker-server=https://${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com \
+                  --docker-username=AWS \
+                  --docker-password="${ECR_TOKEN}" \
+                  --namespace=$NAMESPACE
+                echo "Secret was successfully updated at $(date)"
+          restartPolicy: Never
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecr-private-sa
+  namespace: my-app
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: my-app
+  name: role-full-access-to-secrets
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["regcred"]
+  verbs: ["get", "list", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "create"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ecr-private-role-binding
+  namespace: my-app
+subjects:
+- kind: ServiceAccount
+  name: ecr-private-sa
+  namespace: my-app
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: role-full-access-to-secrets
+  apiGroup: ""
+---

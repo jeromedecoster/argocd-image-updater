@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-version # pods name + replicaset name prefix (can be my-app-dep)
+  namespace: my-app
+spec:
+  selector:
+    matchLabels:
+      app: app-version # must match template.metadata.labels.app below
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: app-version
+    spec:
+      containers:
+      - name: my-app # container name inside pod (can be my-app-pod)
+        image: jeromedecoster/app-version:0.0.1
+        env:
+          - name: APP_PORT
+            value: "3000"
+        ports:
+        - containerPort: 3000

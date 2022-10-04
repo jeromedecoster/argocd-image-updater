@@ -1,0 +1,9 @@
+# Warn: this .dockerignore file is optimized for the production image
+# You MUST add manually `ADD <from> <to>` files from the test version Dockerfile 
+
+# exclude everything
+*
+
+# then include
+!index.js
+!package.json

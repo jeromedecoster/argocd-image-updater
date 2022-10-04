@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../base
+
+patches:
+
+# https://fabianlee.org/2022/04/15/kubernetes-kustomize-transformations-with-patchesjson6902/
+# replace element in map
+- target:
+    kind: Deployment
+    name: app-version
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: 635107281823.dkr.ecr.eu-west-3.amazonaws.com/app-version
+
+# https://fabianlee.org/2022/04/15/kubernetes-kustomize-transformations-with-patchesjson6902/
+# add to map
+- target:
+    kind: Deployment
+    name: app-version
+  patch: |-
+    - op: add
+      path: /spec/template/spec/imagePullSecrets
+      value: 
+        - name: regcred
+
+resources:
+- creds-secret-cm.yaml
+- creds.yaml
